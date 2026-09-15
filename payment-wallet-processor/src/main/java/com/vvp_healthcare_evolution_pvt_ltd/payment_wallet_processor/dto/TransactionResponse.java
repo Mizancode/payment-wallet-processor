@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
-public class transactionResponse {
+public class TransactionResponse {
     private UUID transactionId;
     private TransactionStatus status;
     private String message;
