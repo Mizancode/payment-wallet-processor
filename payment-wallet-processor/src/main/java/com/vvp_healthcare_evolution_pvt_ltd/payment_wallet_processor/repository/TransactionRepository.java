@@ -11,4 +11,6 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction,Long> {
     Optional<Transaction> findByTransactionId(@NotNull(message = "transactionId is required") UUID transactionId);
+
+    long countByTransactionId(UUID transactionId);
 }

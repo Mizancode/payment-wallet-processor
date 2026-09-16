@@ -28,5 +28,5 @@ public class Transaction {
     @Column(nullable = false)
     private TransactionStatus status;
     @Column(nullable = false,name = "created_at")
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt=LocalDateTime.now();
 }
