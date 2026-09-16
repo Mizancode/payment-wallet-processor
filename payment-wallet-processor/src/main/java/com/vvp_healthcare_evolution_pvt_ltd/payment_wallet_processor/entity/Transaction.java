@@ -8,14 +8,19 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions",uniqueConstraints = {
+@UniqueConstraint(
+        name = "uk_transaction_id",
+        columnNames = "transaction_id"
+)
+    })
 @Data
 public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "transaction_id",nullable = false)
+    @Column(name = "transaction_id",nullable = false, unique = true)
     private UUID transactionId;
     @Column(name = "user_id",nullable = false)
     private UUID userId;

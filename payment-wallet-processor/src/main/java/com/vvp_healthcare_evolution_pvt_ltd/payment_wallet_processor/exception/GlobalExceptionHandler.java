@@ -49,4 +49,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
+    @ExceptionHandler(DuplicateTransactionException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicateTransaction(DuplicateTransactionException exception) {
+
+        Map<String,Object> response=new HashMap<>();
+        response.put("timeStamp", LocalDateTime.now());
+        response.put("status", HttpStatus.CONFLICT.value());
+        response.put("message",exception.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
 }

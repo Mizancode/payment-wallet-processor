@@ -5,6 +5,8 @@ import jakarta.persistence.LockModeType;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -15,4 +17,7 @@ public interface WalletRepository extends JpaRepository<Wallet,Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Wallet> findByUserId(@NotNull(message = "userId is required") UUID userId);
+
+    @Query("SELECT w FROM Wallet w WHERE w.userId = :userId")
+    Optional<Wallet> findByUserIdWithoutLock(@Param("userId") UUID userId);
 }

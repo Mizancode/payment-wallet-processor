@@ -6,6 +6,7 @@ import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.entity.Tran
 import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.entity.TransactionStatus;
 import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.entity.TransactionType;
 import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.entity.Wallet;
+import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.exception.DuplicateTransactionException;
 import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.exception.InsufficientFundsException;
 import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.exception.WalletNotFoundException;
 import com.vvp_healthcare_evolution_pvt_ltd.payment_wallet_processor.repository.TransactionRepository;
@@ -29,57 +30,44 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse processTransaction(@Valid TransactionRequest request) {
+        Wallet wallet = walletRepository.findByUserId(request.getUserId()).orElseThrow(() ->
+                        new WalletNotFoundException("Wallet not found for user: " + request.getUserId()));
+
         var existingTransaction = transactionRepository.findByTransactionId(request.getTransactionId());
+
         if (existingTransaction.isPresent()) {
-            TransactionResponse response = new TransactionResponse();
-            response.setTransactionId(request.getTransactionId());
-            response.setMessage("Transaction already processed");
-            response.setStatus(existingTransaction.get().getStatus());
-            response.setRemainingBalance(null);
-            return response;
+            throw new DuplicateTransactionException(
+                    "Transaction already processed: "
+                            + request.getTransactionId()
+            );
         }
-        Wallet wallet = walletRepository.findByUserId(request.getUserId())
-                .orElseThrow(() -> new WalletNotFoundException("Wallet not found for user: " + request.getUserId()));
+
+        BigDecimal newBalance;
+
         if(request.getType()== TransactionType.DEBIT){
             if (wallet.getBalance().compareTo(request.getAmount()) < 0) {
                 throw new InsufficientFundsException("Insufficient funds");
             }
-            BigDecimal newBalance = wallet.getBalance().subtract(request.getAmount());
-            wallet.setBalance(newBalance);
-            walletRepository.save(wallet);
-            Transaction transaction=new Transaction();
-            transaction.setTransactionId(request.getTransactionId());
-            transaction.setAmount(request.getAmount());
-            transaction.setStatus(TransactionStatus.SUCCESS);
-            transaction.setType(request.getType());
-            transaction.setUserId(request.getUserId());
-            transactionRepository.save(transaction);
-            TransactionResponse response = new TransactionResponse();
-            response.setTransactionId(request.getTransactionId());
-            response.setMessage("Transaction processed successfully");
-            response.setStatus(TransactionStatus.SUCCESS);
-            response.setRemainingBalance(newBalance);
-            return response;
+            newBalance= wallet.getBalance().subtract(request.getAmount());
+        }else if(request.getType()==TransactionType.CREDIT){
+            newBalance= wallet.getBalance().subtract(request.getAmount());
+        }else{
+            throw new IllegalArgumentException("Unsupported transaction type");
         }
-
-        if(request.getType()==TransactionType.CREDIT){
-            BigDecimal newBalance = wallet.getBalance().add(request.getAmount());
-            wallet.setBalance(newBalance);
-            walletRepository.save(wallet);
-            Transaction transaction=new Transaction();
-            transaction.setTransactionId(request.getTransactionId());
-            transaction.setAmount(request.getAmount());
-            transaction.setStatus(TransactionStatus.SUCCESS);
-            transaction.setType(request.getType());
-            transaction.setUserId(request.getUserId());
-            transactionRepository.save(transaction);
-            TransactionResponse response = new TransactionResponse();
-            response.setTransactionId(request.getTransactionId());
-            response.setMessage("Transaction processed successfully");
-            response.setStatus(TransactionStatus.SUCCESS);
-            response.setRemainingBalance(newBalance);
-            return response;
-        }
-        throw new IllegalArgumentException("Unsupported transaction type");
+        wallet.setBalance(newBalance);
+        walletRepository.save(wallet);
+        Transaction transaction=new Transaction();
+        transaction.setTransactionId(request.getTransactionId());
+        transaction.setAmount(request.getAmount());
+        transaction.setStatus(TransactionStatus.SUCCESS);
+        transaction.setType(request.getType());
+        transaction.setUserId(request.getUserId());
+        transactionRepository.save(transaction);
+        TransactionResponse response = new TransactionResponse();
+        response.setTransactionId(request.getTransactionId());
+        response.setMessage("Transaction processed successfully");
+        response.setStatus(TransactionStatus.SUCCESS);
+        response.setRemainingBalance(newBalance);
+        return response;
     }
 }
